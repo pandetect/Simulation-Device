@@ -1,14 +1,60 @@
 import argparse 
 import socket
 import time
+import threading
 
 def create_invoker():
     return str.encode('\n')
 
+def thread_communication(conn, addr):
+    with conn:
+        while True:
+            invoker = create_invoker()
+
+            conn.sendall(invoker)
+
+            print('Sent invocation waiting for package', end='')
+
+            package_header = conn.recv(12)
+
+            if not package_header: 
+                print('\nClosed connection')
+                break
+
+            package_header_index  = int.from_bytes(package_header[0:8], byteorder='big')
+            package_header_length = int.from_bytes(package_header[8:12], byteorder='big')
+
+            print('Index:', package_header_index, 'Length:', package_header_length, end='')
+
+            package_data_body = b''
+            package_data_remain = package_header_length + 1
+
+            while True:
+                print('-', end='', sep='')
+                package_data_temp = conn.recv(package_data_remain)
+
+                if not package_data_temp: 
+                    print('\nClosed connection!')
+                    break
+
+                package_data_body += package_data_temp
+                package_data_remain -= len(package_data_temp)
+
+                if package_data_remain == 0:
+                    break
+
+            if not package_data_temp:
+                break
+                
+            print(' Recieved', len(package_data_body) - 1, 'bytes')
+
+            time.sleep(0.250) # sleep 250 ms
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device simulator')
     parser.add_argument('--p', type=int, default=3338) # port
+
+    thread_vector = []
 
     # parse arguments
     args = parser.parse_args()
@@ -27,45 +73,9 @@ if __name__ == '__main__':
 
                 print('Connected to:', addr)
 
-                with conn:
-                    while True:
-                        invoker = create_invoker()
+                t = threading.Thread(target=thread_communication, args=(conn, addr))
+                t.start()
+                thread_vector.append(t)
 
-                        conn.sendall(invoker)
 
-                        print('Sent invocation waiting for package', end='')
-
-                        package_header = conn.recv(12)
-
-                        if not package_header: 
-                            print('\nClosed connection')
-                            break
-
-                        package_header_index  = int.from_bytes(package_header[0:8], byteorder='big')
-                        package_header_length = int.from_bytes(package_header[8:12], byteorder='big')
-
-                        print('Index:', package_header_index, 'Length:', package_header_length, end='')
-
-                        package_data_body = b''
-                        package_data_remain = package_header_length + 1
-
-                        while True:
-                            print('-', end='', sep='')
-                            package_data_temp = conn.recv(package_data_remain)
-
-                            if not package_data_temp: 
-                                print('\nClosed connection!')
-                                break
-
-                            package_data_body += package_data_temp
-                            package_data_remain -= len(package_data_temp)
-
-                            if package_data_remain == 0:
-                                break
-
-                        if not package_data_temp:
-                            break
-                            
-                        print(' Recieved', len(package_data_body) - 1, 'bytes')
-
-                        time.sleep(0.250) # sleep 250 ms
+                
