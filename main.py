@@ -19,7 +19,7 @@ def create_package(packet_index, dummy=True):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device simulator')
-    parser.add_argument('--p', type=int, default=3344) # port
+    parser.add_argument('--p', type=int, default=3333) # port
 
     # parse arguments
     args = parser.parse_args()
