@@ -20,7 +20,7 @@ def create_package(packet_index, dummy=True):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device simulator')
-    parser.add_argument('--addr', type=str, default='127.0.0.1') # address
+    parser.add_argument('--addr', type=str, default='localhost') # address
     parser.add_argument('--p', type=int, default=3338) # port
 
     # parse arguments
