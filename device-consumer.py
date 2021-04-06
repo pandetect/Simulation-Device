@@ -61,9 +61,16 @@ def thread_communication(conn, addr, show_images=True):
                 # frame = np.asarray(pil_image)
                 # frame = np.resize(frame, (100, 100, 3))
 
-                frame = np.from
+                # frame = np.fromstring(package_data_body.decode('ascii'), dtype=np.int8, sep=' ')
+                frame = np.frombuffer(package_data_body, dtype=np.int)
 
-                print(frame.shape)
+                frame = np.resize(frame, (100, 100, 3))
+
+                # a = np.array([1, 2, 3])
+
+                
+
+                print(frame)
                 cv2.imshow('Frame', frame)
 
                 
