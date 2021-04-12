@@ -15,6 +15,7 @@ def thread_communication(conn, addr, show_images=True):
         while True:
             invoker = create_invoker()
 
+            print('Sending', invoker)
             conn.sendall(invoker)
 
             package_header = conn.recv(12)
@@ -24,8 +25,8 @@ def thread_communication(conn, addr, show_images=True):
                 print('\nClosed connection')
                 break
 
-            package_header_index  = int.from_bytes(package_header[0:8], byteorder='big')
-            package_header_length = int.from_bytes(package_header[8:12], byteorder='big')
+            package_header_index  = int.from_bytes(package_header[0:8], byteorder='little')
+            package_header_length = int.from_bytes(package_header[8:12], byteorder='little')
 
             print('Index:', package_header_index, 'Length:', package_header_length, end=' ')
 
@@ -62,24 +63,30 @@ def thread_communication(conn, addr, show_images=True):
                 # frame = np.resize(frame, (100, 100, 3))
 
                 # frame = np.fromstring(package_data_body.decode('ascii'), dtype=np.int8, sep=' ')
-                frame = np.frombuffer(package_data_body, dtype=np.int)
+                #frame = np.frombuffer(package_data_body, dtype=np.int)
 
-                frame = np.resize(frame, (100, 100, 3))
+                #frame = np.resize(frame, (500, 500, 3))
+                reversed_data_body = b''
+                for b in package_data_body:
+                    reversed_data_body += b.to_bytes(1, byteorder='little')
 
+                image = Image.open(io.BytesIO(bytearray(reversed_data_body)))
+                frame = np.array(image)
+                frame = cv2.cvtColor(frame , cv2.COLOR_BGR2RGB)
+                print(frame.shape)
                 # a = np.array([1, 2, 3])
 
-                
-
-                print(frame)
+                # print(frame)
                 cv2.imshow('Frame', frame)
 
-                
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    cv2.destroyAllWindows()
 
                 # print(package_data_body.decode('ascii'))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device simulator')
-    parser.add_argument('--p', type=int, default=3338) # port
+    parser.add_argument('--p', type=int, default=3333) # port
 
     thread_vector = []
 
