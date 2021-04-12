@@ -6,16 +6,24 @@ import cv2
 import numpy as np
 import io
 from PIL import Image
+import sys
+import fileinput
+import select
 
 def create_invoker():
     return str.encode('\n')
 
-def thread_communication(conn, addr, show_images=True):
+__close_requested = False
+
+def thread_communication(conn, addr, show_images=False):
+    global __close_requested
     with conn:
-        while True:
+
+        while not __close_requested:
+
             invoker = create_invoker()
 
-            print('Sending', invoker)
+            # print('Sending', invoker)
             conn.sendall(invoker)
 
             package_header = conn.recv(12)
@@ -28,7 +36,7 @@ def thread_communication(conn, addr, show_images=True):
             package_header_index  = int.from_bytes(package_header[0:8], byteorder='little')
             package_header_length = int.from_bytes(package_header[8:12], byteorder='little')
 
-            print('Index:', package_header_index, 'Length:', package_header_length, end=' ')
+            # print('From', addr, 'Index:', package_header_index, 'Length:', package_header_length, end=' ')
 
             package_data_body = b''
             package_data_remain = package_header_length
@@ -52,8 +60,8 @@ def thread_communication(conn, addr, show_images=True):
                 cv2.destroyAllWindows()
                 break
             
-            print(' [chunks=', num_chunks, '] ', end='', sep='')
-            print(' Recieved', len(package_data_body), 'bytes')
+            # print(' [chunks=', num_chunks, '] ', end='', sep='')
+            # print(' Recieved', len(package_data_body), 'bytes')
 
             if show_images:
                 # buffer_bytes_array = bytearray(package_data_body[:-1])
@@ -73,7 +81,7 @@ def thread_communication(conn, addr, show_images=True):
                 image = Image.open(io.BytesIO(bytearray(reversed_data_body)))
                 frame = np.array(image)
                 frame = cv2.cvtColor(frame , cv2.COLOR_BGR2RGB)
-                print(frame.shape)
+
                 # a = np.array([1, 2, 3])
 
                 # print(frame)
@@ -81,8 +89,31 @@ def thread_communication(conn, addr, show_images=True):
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
+                    break
 
                 # print(package_data_body.decode('ascii'))
+
+def GetChar(Block=True):
+  if Block or select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+    return sys.stdin.read(1)
+  return ''
+
+def thread_userinput():
+    global __close_requested
+    while True:
+        # print('muzo')
+        # req = input()
+        # print('muzo der ki', req)
+        try:
+            req = GetChar(False)
+        except Exception:
+            return 
+
+        if not 'q' in req: continue
+
+        __close_requested = True
+
+        break
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device simulator')
@@ -97,21 +128,31 @@ if __name__ == '__main__':
 
     print('Accepting connections', ip_address, hostname)
 
+    user_t = threading.Thread(target=thread_userinput)
+    user_t.start()
 
-    while True:
-        
+
+    while not __close_requested:
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('192.168.1.34', args.p))
-            s.listen()
+            try:
+                s.bind(('192.168.1.34', args.p))
+                s.listen()
+            except Exception as e :
+                print(e)
+                __close_requested = True
+                exit(-1)
 
-            while True:
+
+            while not __close_requested:
                 conn, addr = s.accept()
 
-                print('Connected to:', addr)
+
+                print('Connected to:', addr[0])
 
                 t = threading.Thread(target=thread_communication, args=(conn, addr))
                 t.start()
                 thread_vector.append(t)
-
+    
 
                 
