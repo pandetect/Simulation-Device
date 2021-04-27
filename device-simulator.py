@@ -1,6 +1,10 @@
 # This program takes the ip and the port from the commandline arguments.
 # then runs the webcam
 
+
+# TO RUN
+# python .\device-simulator.py --addr 192.168.1.36 --p 3333
+
 import argparse 
 import socket
 import time
